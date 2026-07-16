@@ -1,0 +1,35 @@
+{
+  /* Editor - General */
+  "editor.formatOnSave": true,
+  "editor.defaultFormatter": "esbenp.prettier-vscode",
+
+  /* Editor - Code Actions */
+  "editor.codeActionsOnSave": {
+    "source.fixAll": "never",
+    "source.fixAll.eslint": "explicit",
+    "source.fixAll.stylelint": "explicit",
+    "source.organizeImports": "never"
+  },
+
+  /* Prettier */
+  "prettier.enable": true,
+  // Optional: specify your custom Prettier config file path
+  "prettier.configPath": "./prettier.config.js",
+
+  /* Stylelint 配置优化 */
+  "stylelint.enable": true,
+  "stylelint.packageManager": "pnpm",
+  "stylelint.validate": ["css", "postcss"],
+  "stylelint.snippet": ["css", "postcss"],
+  "stylelint.configFile": "./stylelint.config.js",
+
+  // 禁用原生校验
+  "css.validate": false,
+  "less.validate": false,
+  "scss.validate": false,
+  "postcss.validate": false,
+
+  "emmet.includeLanguages": {
+    "postcss": "css"
+  }
+}

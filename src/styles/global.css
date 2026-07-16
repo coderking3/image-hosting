@@ -1,0 +1,145 @@
+/* stylelint-disable custom-property-empty-line-before */
+
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@import 'shadcn/tailwind.css';
+
+/* --- Local Fonts --- */
+
+@font-face {
+  font-family: Audiowide;
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/audiowide-regular.woff2') format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PingFang SC';
+  font-style: normal;
+  font-weight: 400;
+  src: url('https://cdn.jsdelivr.net/npm/font-pingfang-sc@1.0.5/PingFangSC-Regular.woff2')
+    format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PingFang SC';
+  font-style: normal;
+  font-weight: 500;
+  src: url('https://cdn.jsdelivr.net/npm/font-pingfang-sc@1.0.5/PingFangSC-Medium.woff2')
+    format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'PingFang SC';
+  font-style: normal;
+  font-weight: 600;
+  src: url('https://cdn.jsdelivr.net/npm/font-pingfang-sc@1.0.5/PingFangSC-Semibold.woff2')
+    format('woff2');
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Input;
+  font-style: normal;
+  font-weight: 400;
+  src: url('/fonts/input-mono.ttf') format('ttf');
+  font-display: swap;
+}
+
+@theme inline {
+  /* Shadcn */
+  --color-background: oklch(13.44% 0 0deg); /* #080808 */
+  --color-foreground: oklch(96.42% 0 0deg); /* #f3f3f3 */
+
+  --color-card: oklch(17.3% 0 0deg); /* #101010 */
+  --color-card-foreground: oklch(96.42% 0 0deg); /* #f3f3f3 */
+  --color-popover: oklch(17.3% 0 0deg); /* #101010 */
+  --color-popover-foreground: oklch(96.42% 0 0deg); /* #f3f3f3 */
+
+  --color-primary: oklch(100% 0 0deg); /* #ffffff */
+  --color-primary-foreground: oklch(17.3% 0 0deg); /* #101010 */
+  --color-secondary: oklch(24.78% 0 0deg); /* #212121 */
+  --color-secondary-foreground: oklch(96.42% 0 0deg); /* #f3f3f3 */
+  --color-muted: oklch(24.78% 0 0deg); /* #212121 */
+  --color-muted-foreground: oklch(96.42% 0 0deg); /* #f3f3f3 */
+  --color-accent: oklch(21.03% 0.0059 285.89deg); /* #18181b */
+  --color-accent-foreground: oklch(95.81% 0 0deg); /* #f1f1f1 */
+  --color-destructive: oklch(56.8% 0.2002 26.41deg); /* #d23131 */
+
+  /* --color-destructive2: oklch(64.27% 0.2153 28.81deg); #f34336 */
+
+  --color-border: oklch(24.78% 0 0deg); /* #212121 */
+  --color-input: oklch(20.46% 0 0deg); /* #171717 */
+  --color-ring: oklch(24.78% 0 0deg); /* #212121 */
+  --radius: 8px;
+
+  /* Typography */
+  --font-logo: 'Audiowide';
+  --font-sans:
+    'PingFang SC', ui-sans-serif, system-ui, -apple-system, blinkmacsystemfont,
+    'Segoe UI', roboto, sans-serif;
+  --font-mono:
+    'Input', 'IBM Plex Mono', ui-monospace, 'JetBrains Mono', 'PingFang SC',
+    monospace;
+
+  /* Colors */
+  --color-obsidian: #101010;
+  --color-carbon: #080808;
+  --color-chalk: #f3f3f3;
+  --color-graphite: #212121;
+  --color-smoke: #9c9c9c;
+  --color-ash: #c1c1c1;
+  --color-iron: #474747;
+  --color-signal-white: #fff;
+  --color-compass-gold: #6f6759;
+  --color-card-slate: #3b3d45;
+
+  /* Typography — Scale */
+  --text-caption: 13px;
+  --leading-caption: 2.69;
+  --text-body: 16px;
+  --leading-body: 1.25;
+  --text-heading-xs: 18px;
+  --leading-heading-xs: 1.31;
+  --text-subheading: 21px;
+  --leading-subheading: 0.95;
+  --text-heading-sm: 23px;
+  --leading-heading-sm: 1.07;
+  --leading-heading: 1.03;
+  --text-heading-lg: 44px;
+  --leading-heading-lg: 1.07;
+  --tracking-heading-lg: -0.31px;
+
+  --text-display: 63px;
+  --leading-display: 1.05;
+  --tracking-display: -0.69px;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+
+  body {
+    @apply bg-background text-foreground leading-body scroll-pt-12 overflow-x-hidden font-sans font-normal antialiased;
+  }
+
+  ::selection {
+    @apply text-background bg-foreground;
+  }
+
+  ::-webkit-scrollbar {
+    width: 2px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #fff;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #000;
+  }
+}

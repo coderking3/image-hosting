@@ -1,0 +1,80 @@
+@keyframes draw-arrow-up {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  22.02% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  77.06% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  99.08% {
+    clip-path: inset(0 100% 0 0);
+  }
+
+  100% {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes draw-arrow-down {
+  0% {
+    clip-path: inset(0 0 0 100%);
+  }
+
+  22.02% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  77.06% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  99.08% {
+    clip-path: inset(0 0 0 100%);
+  }
+
+  100% {
+    clip-path: inset(0 0 0 100%);
+  }
+}
+
+@keyframes draw-divider-line {
+  0% {
+    clip-path: inset(0 50% 0 50%);
+  }
+
+  22.02% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  77.06% {
+    clip-path: inset(0 0 0 0);
+  }
+
+  99.08% {
+    clip-path: inset(0 50% 0 50%);
+  }
+
+  100% {
+    clip-path: inset(0 50% 0 50%);
+  }
+}
+
+.arrow-up {
+  clip-path: inset(0 100% 0 0);
+  animation: draw-arrow-up 5.45s ease-out infinite;
+}
+
+.arrow-down {
+  clip-path: inset(0 0 0 100%);
+  animation: draw-arrow-down 5.45s ease-out infinite;
+}
+
+.divider-line {
+  clip-path: inset(0 50% 0 50%);
+  animation: draw-divider-line 5.45s ease-out infinite;
+}
