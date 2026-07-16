@@ -3,6 +3,8 @@ import { useEffect, useState } from 'react'
 
 import { KButton } from '@/components/kui'
 
+import styles from './Home.module.css'
+
 const features = [
   {
     icon: Upload,
@@ -61,18 +63,24 @@ function StatsBadge() {
   return (
     <a
       href="/gallery"
-      className="text-chalk inline-flex items-center rounded-[4.5px] bg-[#ffffff1a] pl-[3.3px] no-underline transition-opacity hover:opacity-80"
+      className="text-chalk inline-flex h-7 items-center rounded-[4.5px] bg-[#ffffff1a] pl-[3.3px] no-underline transition-opacity hover:opacity-80"
     >
-      {/* 动画指示器 —— 替代原站 Lottie */}
+      {/* 动画指示器 —— 1:1 还原 Hyperstudio Lottie */}
       <span className="relative flex size-5 items-center justify-center">
-        <span className="absolute inline-flex size-2 animate-ping rounded-full bg-[#4da964] opacity-75" />
-        <span className="relative inline-flex size-2 rounded-full bg-[#4da964]" />
+        {/* pulse 层：t=0 与 pointer 完全重叠，随后 5x 扩散 + 淡出 */}
+        <span
+          className={`absolute size-1 rounded-full bg-[#00ac5c] ${styles.ping}`}
+        />
+        {/* pointer 层：始终可见，1→1.66x 轻微呼吸 */}
+        <span
+          className={`relative size-1 rounded-full bg-[#00ac5c] ${styles.breathe}`}
+        />
       </span>
       <span
-        className="font-mono text-[13px]"
+        className="text-caption font-mono"
         style={{
           WebkitTextStrokeWidth: '0.15px',
-          padding: '5.5px 10px 2.8px 2px'
+          padding: '6px 10px 5px 2px'
         }}
       >
         已托管 {count.toLocaleString()} 张图片
@@ -97,7 +105,8 @@ function HeroSection() {
             className="text-chalk max-w-[755px] text-center font-sans text-[52px] leading-[54px] font-normal tracking-[-0.5px] sm:text-[63px] sm:leading-[66px] sm:tracking-[-0.7px]"
             style={{ WebkitTextStrokeWidth: '0.9px' }}
           >
-            简单高效的图片托管服务
+            <span className="inline-block">简单高效的</span>
+            <span className="inline-block">图片托管服务</span>
           </h1>
 
           {/* 描述 对应 .text-block-790014705 */}

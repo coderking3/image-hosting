@@ -1,0 +1,46 @@
+/*
+ * StatsBadge status indicator —— 1:1 还原 Hyperstudio Lottie 动画
+ *
+ * Lottie 结构（2s 周期，30fps）：
+ *   pointer 层：scale 20 → 33.2(1.66x) → 20，opacity 恒 100%
+ *   pulse 层：  scale 20 → 100(5x)，opacity 100% → 0%（~1s 完成）
+ *   两层 t=0 时完全重叠（同 scale、同 opacity），pulse 向外扩散后 pointer 留在原位呼吸
+ */
+
+@keyframes dot-breathe {
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.66);
+  }
+}
+
+@keyframes dot-ping {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+
+  /* ~1.03s / 2s ≈ 52% —— pulse 扩散到 5x 并完全淡出 */
+  52% {
+    opacity: 0;
+    transform: scale(5);
+  }
+
+  /* 剩余 48% 时间保持不可见，等待下个周期同步触发 */
+  100% {
+    opacity: 0;
+    transform: scale(5);
+  }
+}
+
+.breathe {
+  animation: dot-breathe 2s ease-in-out infinite;
+}
+
+.ping {
+  animation: dot-ping 2s ease-out infinite;
+}

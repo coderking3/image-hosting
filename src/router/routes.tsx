@@ -2,7 +2,7 @@ import type { RouteObject } from 'react-router'
 
 import { AppLayout } from '../components/layout'
 import Gallery from '../pages/gallery'
-import Home from '../pages/home'
+import Home from '../pages/Home/Home'
 import Upload from '../pages/upload'
 
 export const routes = createRoutes([
