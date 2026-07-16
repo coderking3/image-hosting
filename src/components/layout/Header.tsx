@@ -38,7 +38,7 @@ const Header = () => {
           </span>
 
           <span className="inline-block pt-[7.5px] pr-2.75 pb-[6.5px]">
-            登录
+            登录账户
           </span>
         </KButton>
       </nav>
