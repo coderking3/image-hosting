@@ -31,5 +31,8 @@
 
   "emmet.includeLanguages": {
     "postcss": "css"
+  },
+  "[markdown]": {
+    "editor.defaultFormatter": "esbenp.prettier-vscode"
   }
 }

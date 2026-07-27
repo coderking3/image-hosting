@@ -1,168 +1,363 @@
+import type { ChangeEvent, DragEvent } from 'react'
+
+import type { QueueItem } from '@/hooks/useUploadQueue'
+
 import {
-  AlertTriangle,
-  CheckCircle2,
-  Trash2,
-  UploadCloud,
-  XCircle
+  AlertCircle,
+  Check,
+  Copy,
+  Loader2,
+  RotateCw,
+  Upload as UploadIcon,
+  X
 } from 'lucide-react'
-import { useCallback, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 
-import { cn } from '@/utils'
+import { LoginModal } from '@/components/LoginModal'
+import {
+  Button,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue
+} from '@/components/ui'
+import { useUploadQueue } from '@/hooks/useUploadQueue'
+import { cn, copyToClipboard } from '@/utils'
+import { isAuthenticated } from '@/utils/auth'
+import { toHTML, toMarkdown } from '@/utils/format'
 
-type UploadStatus = 'uploading' | 'success' | 'error' | 'warning'
+type CopyFormat = 'direct' | 'markdown' | 'html'
 
-interface QueuedFile {
-  id: string
-  file: File
-  progress: number
-  status: UploadStatus
-}
-
-const STATUS_META: Record<
-  UploadStatus,
-  { dot: string; label: string; icon: typeof CheckCircle2 }
+const formatMap: Record<
+  CopyFormat,
+  { label: string; build: (url: string, name: string) => string }
 > = {
-  uploading: { dot: 'bg-wire-blue', label: 'Uploading', icon: UploadCloud },
-  success: { dot: 'bg-pulse-green', label: 'Done', icon: CheckCircle2 },
-  error: { dot: 'bg-ember-red', label: 'Failed', icon: XCircle },
-  warning: { dot: 'bg-amber-warn', label: 'Too Large', icon: AlertTriangle }
+  direct: { label: '直链', build: (url) => url },
+  markdown: { label: 'Markdown', build: toMarkdown },
+  html: { label: 'HTML', build: toHTML }
 }
 
-function formatSize(bytes: number) {
-  const mb = bytes / (1024 * 1024)
-  return `${mb.toFixed(1)} MB`
-}
+const concurrencyItems = [1, 3, 5].map((n) => ({
+  label: String(n),
+  value: String(n)
+}))
 
 export default function UploadPage() {
+  const [loginOpen, setLoginOpen] = useState(false)
+  const [authenticated, setAuthenticated] = useState(isAuthenticated)
+  const [concurrency, setConcurrency] = useState(3)
   const [isDragging, setIsDragging] = useState(false)
-  const [queue, setQueue] = useState<QueuedFile[]>([])
-  const inputRef = useRef<HTMLInputElement>(null)
 
-  const enqueue = useCallback((files: FileList) => {
-    const next: QueuedFile[] = Array.from(files).map((file) => ({
-      id: crypto.randomUUID(),
-      file,
-      progress: 0,
-      status: file.size > 10 * 1024 * 1024 ? 'warning' : 'uploading'
-    }))
-    setQueue((prev) => [...next, ...prev])
+  const { items, addFiles, retryItem, removeItem, clearFinished } =
+    useUploadQueue({ concurrency })
 
-    // TODO: 替换成真实上传逻辑（ky.post + onUploadProgress），这里只是演示进度条视觉
-    next.forEach((item) => {
-      if (item.status === 'warning') return
-      const timer = setInterval(() => {
-        setQueue((prev) =>
-          prev.map((q) => {
-            if (q.id !== item.id) return q
-            const progress = Math.min(q.progress + 20, 100)
-            return {
-              ...q,
-              progress,
-              status: progress === 100 ? 'success' : 'uploading'
-            }
-          })
-        )
-      }, 300)
-      setTimeout(clearInterval, 2000, timer)
-    })
+  const fileInputRef = useRef<HTMLInputElement>(null)
+
+  const successCount = items.filter((it) => it.status === 'success').length
+  const errorCount = items.filter((it) => it.status === 'error').length
+  const uploadingCount = items.filter((it) => it.status === 'uploading').length
+
+  const guardOrOpenLogin = () => {
+    if (!authenticated) {
+      setLoginOpen(true)
+      return false
+    }
+    return true
+  }
+
+  const handleFileSelect = (e: ChangeEvent<HTMLInputElement>) => {
+    if (!guardOrOpenLogin()) return
+    if (e.target.files?.length) {
+      const files = Array.from(e.target.files).filter((f) =>
+        f.type.startsWith('image/')
+      )
+      addFiles(files)
+    }
+    e.target.value = ''
+  }
+
+  const handleDrop = (e: DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    setIsDragging(false)
+    if (!guardOrOpenLogin()) return
+    if (e.dataTransfer.files?.length) {
+      const files = Array.from(e.dataTransfer.files).filter((f) =>
+        f.type.startsWith('image/')
+      )
+      addFiles(files)
+    }
+  }
+
+  useEffect(() => {
+    const handlePaste = (e: ClipboardEvent) => {
+      if (!authenticated) {
+        setLoginOpen(true)
+        return
+      }
+      const dataTransferItems = e.clipboardData?.items
+      if (!dataTransferItems) return
+
+      const files: File[] = []
+      for (let i = 0; i < dataTransferItems.length; i++) {
+        const item = dataTransferItems[i]
+        if (item.kind === 'file' && item.type.startsWith('image/')) {
+          const file = item.getAsFile()
+          if (file) files.push(file)
+        }
+      }
+      if (files.length) addFiles(files)
+    }
+    document.addEventListener('paste', handlePaste)
+    return () => document.removeEventListener('paste', handlePaste)
+  }, [authenticated, addFiles])
+
+  const handleCopy = async (item: QueueItem, format: CopyFormat) => {
+    if (!item.result) return
+    const text = formatMap[format].build(item.result.url, item.result.name)
+    const ok = await copyToClipboard(text)
+    // TODO: 换成项目里统一的 toast
+    if (ok) console.info(`已复制（${formatMap[format].label}）：${text}`)
+  }
+
+  const handleLoginSuccess = useCallback(() => {
+    setAuthenticated(true)
   }, [])
 
   return (
-    <section className="mx-auto max-w-[720px] px-6 py-16">
-      <h1 className="text-chalk font-sans text-[34px]">Upload</h1>
-      <p className="text-smoke mt-2 font-sans text-base">
-        Drag files in, or click to browse.
-      </p>
+    <>
+      <div className="mx-auto flex w-full max-w-212.5 flex-col items-start px-5 pt-25 pb-25 md:pt-32.5">
+        <h1 className="my-0 text-[36px] leading-11.25 font-normal text-chalk [text-stroke-width:0.35px] xs:text-[42px] xs:leading-heading-lg">
+          上传图片
+        </h1>
 
-      <div
-        onDragOver={(e) => {
-          e.preventDefault()
-          setIsDragging(true)
-        }}
-        onDragLeave={() => setIsDragging(false)}
-        onDrop={(e) => {
-          e.preventDefault()
-          setIsDragging(false)
-          if (e.dataTransfer.files.length) enqueue(e.dataTransfer.files)
-        }}
-        onClick={() => inputRef.current?.click()}
-        className={cn(
-          'border-graphite bg-carbon mt-8 flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed px-6 py-20 transition-colors',
-          isDragging && 'border-signal-white bg-white/5'
+        {/* 拖拽/粘贴/点击上传区 */}
+        <div
+          className={cn(
+            'relative mt-8.75 flex w-full flex-col items-center gap-3 rounded-lg border border-dashed px-5 py-12.5 text-center transition-colors',
+            isDragging ? 'border-[#e7c59a] bg-[#e7c59a0d]' : 'border-[#333]'
+          )}
+          onDragOver={(e) => {
+            e.preventDefault()
+            if (authenticated) setIsDragging(true)
+          }}
+          onDragLeave={(e) => {
+            e.preventDefault()
+            setIsDragging(false)
+          }}
+          onDrop={handleDrop}
+        >
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            accept="image/*"
+            className="hidden"
+            onChange={handleFileSelect}
+          />
+
+          <UploadIcon className="size-9 text-[#686868]" />
+          <p className="text-[15px] text-[#a3a3a3]">
+            拖拽图片到此处，或粘贴、点击选择文件
+          </p>
+          <p className="text-caption text-[#686868]">
+            支持 JPG / PNG / GIF / WebP 等常见格式
+          </p>
+
+          <Button
+            className="mt-2 rounded-full bg-[#e7c59a] px-5 text-[#0d0d0d] hover:opacity-90"
+            onClick={() => {
+              if (guardOrOpenLogin()) fileInputRef.current?.click()
+            }}
+          >
+            选择文件
+          </Button>
+
+          {!authenticated && (
+            <button
+              type="button"
+              onClick={() => setLoginOpen(true)}
+              className="absolute inset-0 flex flex-col items-center justify-center gap-2 rounded-lg bg-black/75 backdrop-blur-[2px]"
+            >
+              <span className="text-[15px] text-chalk">登录后即可上传</span>
+              <span className="rounded-full bg-[#e7c59a] px-4 py-1.5 text-caption font-medium text-[#0d0d0d]">
+                立即登录
+              </span>
+            </button>
+          )}
+        </div>
+
+        {/* 并发数控制 + 汇总 + 清除已完成 */}
+        {items.length > 0 && (
+          <div className="mt-6.25 flex w-full flex-wrap items-center justify-between gap-3">
+            <div className="flex items-center gap-4.5 text-caption text-[#a3a3a3]">
+              <span>共 {items.length} 张</span>
+              <span className="text-[#adff02]">{successCount} 成功</span>
+              {errorCount > 0 && (
+                <span className="text-red-400">{errorCount} 失败</span>
+              )}
+              {uploadingCount > 0 && <span>{uploadingCount} 上传中</span>}
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-caption text-[#686868]">
+                <span>并发数</span>
+                <Select
+                  items={concurrencyItems}
+                  value={String(concurrency)}
+                  onValueChange={(v) => setConcurrency(Number(v))}
+                >
+                  <SelectTrigger className="h-7.5 w-16.25 border-[#222] bg-transparent text-chalk">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent className="border-[#222] bg-[#0d0d0d] text-chalk">
+                    <SelectGroup>
+                      {concurrencyItems.map((item) => (
+                        <SelectItem key={item.value} value={item.value}>
+                          {item.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {successCount > 0 && (
+                <Button
+                  variant="ghost"
+                  className="h-7.5 text-caption text-[#a3a3a3] hover:text-chalk"
+                  onClick={clearFinished}
+                >
+                  清除已完成
+                </Button>
+              )}
+            </div>
+          </div>
         )}
-      >
-        <UploadCloud className="text-chalk size-8" strokeWidth={1.5} />
-        <p className="text-chalk mt-4 font-sans text-sm">Drop images here</p>
-        <p className="text-smoke mt-1 font-sans text-[13px]">
-          or click to select files — max 10MB each
-        </p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          className="hidden"
-          onChange={(e) => e.target.files && enqueue(e.target.files)}
-        />
+
+        {/* 队列网格 */}
+        {items.length > 0 && (
+          <div className="mt-4.5 grid w-full grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+            {items.map((item) => (
+              <QueueItemCard
+                key={item.id}
+                item={item}
+                onRemove={() => removeItem(item.id)}
+                onRetry={() => retryItem(item.id)}
+                onCopy={(format) => handleCopy(item, format)}
+              />
+            ))}
+          </div>
+        )}
       </div>
 
-      {queue.length > 0 && (
-        <ul className="divide-graphite border-graphite mt-8 divide-y border-t border-b">
-          {queue.map((item) => {
-            const meta = STATUS_META[item.status]
-            return (
-              <li key={item.id} className="flex items-center gap-4 py-4">
-                <div className="border-graphite bg-carbon flex size-10 items-center justify-center rounded-md border">
-                  <meta.icon className="text-chalk size-4" strokeWidth={1.5} />
-                </div>
+      <LoginModal
+        open={loginOpen}
+        onOpenChange={setLoginOpen}
+        onSuccess={handleLoginSuccess}
+      />
+    </>
+  )
+}
 
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center justify-between">
-                    <p className="text-chalk truncate font-sans text-sm">
-                      {item.file.name}
-                    </p>
-                    <span className="text-ash font-mono text-[13px] tracking-[-0.022em]">
-                      {formatSize(item.file.size)}
-                    </span>
-                  </div>
+interface QueueItemCardProps {
+  item: QueueItem
+  onRemove: () => void
+  onRetry: () => void
+  onCopy: (format: CopyFormat) => void
+}
 
-                  <div className="mt-2 flex items-center gap-3">
-                    <div className="bg-graphite h-[1px] flex-1">
-                      <div
-                        className={cn(
-                          'h-[1px] transition-[width] duration-300',
-                          item.status === 'success'
-                            ? 'bg-pulse-green'
-                            : 'bg-wire-blue'
-                        )}
-                        style={{ width: `${item.progress}%` }}
-                      />
-                    </div>
-                    <span
-                      className={cn(
-                        'border-graphite bg-badge-ink text-smoke inline-flex items-center gap-1.5 rounded-sm border px-2.5 py-1 font-sans text-[11px] tracking-wide uppercase'
-                      )}
-                    >
-                      <span className={cn('size-1.5 rounded-full', meta.dot)} />
-                      {meta.label}
-                    </span>
-                  </div>
-                </div>
+function QueueItemCard({
+  item,
+  onRemove,
+  onRetry,
+  onCopy
+}: QueueItemCardProps) {
+  return (
+    <div className="group relative aspect-square overflow-hidden rounded-md border border-[#222]">
+      <img
+        src={item.previewUrl}
+        alt={item.file.name}
+        className="size-full object-cover"
+      />
 
-                <button
-                  onClick={() =>
-                    setQueue((prev) => prev.filter((q) => q.id !== item.id))
-                  }
-                  className="text-smoke hover:text-ember-red transition-colors"
-                  aria-label="Remove"
-                >
-                  <Trash2 className="size-4" strokeWidth={1.5} />
-                </button>
-              </li>
-            )
-          })}
-        </ul>
+      <button
+        type="button"
+        onClick={onRemove}
+        className="absolute top-1.5 right-1.5 flex size-5.5 items-center justify-center rounded-full bg-black/60 text-chalk opacity-0 transition-opacity group-hover:opacity-100"
+        aria-label="移除"
+      >
+        <X className="size-3.25" />
+      </button>
+
+      {item.status === 'uploading' && (
+        <div className="absolute inset-0 flex flex-col justify-end bg-black/40">
+          <div className="flex items-center justify-center pb-1.5">
+            <Loader2 className="size-4.5 animate-spin text-chalk" />
+          </div>
+          <div className="h-1 w-full bg-white/15">
+            <div
+              className="h-full bg-[#e7c59a] transition-all"
+              style={{ width: `${item.progress}%` }}
+            />
+          </div>
+        </div>
       )}
-    </section>
+
+      {item.status === 'error' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-black/75 px-2 text-center">
+          <AlertCircle className="size-6 text-red-400" />
+          <span className="line-clamp-2 text-[11.5px] text-[#a3a3a3]">
+            {item.error}
+          </span>
+          <button
+            type="button"
+            onClick={onRetry}
+            className="flex items-center gap-1 rounded-full bg-[#e7c59a] px-2.5 py-1 text-[11.5px] font-medium text-[#0d0d0d]"
+          >
+            <RotateCw className="size-3" />
+            重试
+          </button>
+        </div>
+      )}
+
+      {item.status === 'success' && (
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 bg-black/0 opacity-0 transition-all group-hover:bg-black/60 group-hover:opacity-100">
+          <div className="absolute top-1.5 left-1.5 flex size-5.5 items-center justify-center rounded-full bg-[#adff02]">
+            <Check className="size-3.25 text-[#0d0d0d]" strokeWidth={3} />
+          </div>
+
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <button
+                  type="button"
+                  className="flex items-center gap-1.5 rounded-full bg-[#e7c59a] px-3 py-1.5 text-[12.5px] font-medium text-[#0d0d0d]"
+                />
+              }
+            >
+              <Copy className="size-3.5" />
+              复制链接
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="border-[#222] bg-[#0d0d0d] text-chalk">
+              {(Object.keys(formatMap) as CopyFormat[]).map((key) => (
+                <DropdownMenuItem
+                  key={key}
+                  className="text-caption focus:bg-[#161616] focus:text-chalk"
+                  onClick={() => onCopy(key)}
+                >
+                  {formatMap[key].label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      )}
+    </div>
   )
 }

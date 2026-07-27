@@ -1,3 +1,5 @@
+import type { Recordable } from '@/types'
+
 import jsCookie from 'js-cookie'
 
 interface CookieOptions {
@@ -26,11 +28,11 @@ export function getCookie<T = string>(
 /**
  * 获取所有cookie
  */
-export function getCookie(): Record<string, string>
+export function getCookie<T = Recordable>(): T
 export function getCookie<T = string>(
   key?: string,
   options?: GetCookieOptions
-): T | Record<string, string> | undefined {
+): T | Recordable | undefined {
   if (!key) return jsCookie.get()
 
   const value = jsCookie.get(key)

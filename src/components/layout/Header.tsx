@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 
 import { UserIcon } from '../icons'
-import { KButton } from '../kui'
+import { MetalButton } from '../MetalButton'
 import Logo from './Logo'
 
 const NAV_LINKS = [
@@ -15,24 +15,32 @@ const Header = () => {
   // const isAuthenticated = false
 
   return (
-    <header className="bg-carbon/60 fixed z-9999 flex w-full items-center justify-start px-5 backdrop-blur-sm [flex-flow:column]">
+    <header className="fixed z-9999 flex w-full items-center justify-start bg-carbon/60 px-5 backdrop-blur-sm [flex-flow:column] max-xs:pr-2.25 max-xs:pl-3.75">
       <nav className="flex h-14 w-full max-w-212.5 items-center justify-between py-2">
-        <div className="flex items-center justify-center gap-6">
+        {/* Desktop Navbar */}
+        <div className="flex items-center justify-center gap-6 max-md:hidden">
           <Logo />
-          <div className="bg-primary/[32.9%] h-5 w-px" />
+          <div className="h-5 w-px bg-primary/[32.9%]" />
           <div className="flex items-center justify-center gap-6">
             {NAV_LINKS.map((link) => (
               <Link
                 key={link.to}
                 to={link.to}
-                className="text-foreground/95 hover:text-foreground/80 items-baseline text-[14px] leading-[1.2] transition-colors"
+                className="items-baseline text-[14px] leading-[1.2] text-foreground/95 transition-colors hover:text-foreground/80"
               >
                 {link.label}
               </Link>
             ))}
           </div>
         </div>
-        <KButton contentClassName="p-0 gap-2">
+
+        {/* Mobile Navbar */}
+        <div className="hidden items-center justify-center gap-6 max-md:flex">
+          <Logo />
+        </div>
+
+        {/* Login In */}
+        <MetalButton contentClassName="p-0 gap-2">
           <span className="ml-1 inline-flex size-7 items-center justify-center overflow-hidden rounded-full bg-white">
             <UserIcon className="mt-px size-5.5" />
           </span>
@@ -40,7 +48,7 @@ const Header = () => {
           <span className="inline-block pt-[7.5px] pr-2.75 pb-[6.5px]">
             登录账户
           </span>
-        </KButton>
+        </MetalButton>
       </nav>
     </header>
   )

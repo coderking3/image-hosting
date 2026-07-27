@@ -13,13 +13,14 @@ interface LogoProps {
    * - false: force hide (regardless of breakpoint)
    */
   showIcon?: boolean
+  text?: string
 }
 
-function Logo({ showIcon }: LogoProps) {
+function Logo({ showIcon, text = 'King3 Image' }: LogoProps) {
   return (
     <Link
       to="/"
-      className="text-accent-foreground hover:text-accent-foreground/80 mx-1 flex items-center transition-colors duration-200 select-none"
+      className="mx-1 flex items-center text-accent-foreground transition-colors duration-200 select-none hover:text-accent-foreground/80"
     >
       <span
         className={cn(
@@ -34,8 +35,8 @@ function Logo({ showIcon }: LogoProps) {
         <LogoIcon size={29}></LogoIcon>
       </span>
 
-      <span className="font-logo text-heading-sm leading-heading-sm ml-0.75 font-normal">
-        King3 Image
+      <span className="ml-0.75 font-logo text-heading-sm leading-heading-sm font-normal">
+        {text}
       </span>
     </Link>
   )

@@ -1,28 +1,21 @@
 import { Outlet } from 'react-router'
 
+import { Toaster } from '../ui'
+import { Footer } from './Footer'
 import Header from './Header'
-
-const footerDate = new Date()
 
 function AppLayout() {
   return (
-    <div className="bg-background text-foreground flex min-h-svh flex-col">
+    <div className="flex min-h-svh flex-col bg-background text-foreground">
       <Header />
 
       <main className="flex-1">
         <Outlet />
       </main>
 
-      <footer className="border-graphite border-t">
-        <div className="mx-auto flex max-w-300 flex-col items-center justify-between gap-3 px-6 py-8 sm:flex-row">
-          <span className="text-chalk font-sans text-sm">
-            hello@hyperstudio.org
-          </span>
-          <span className="text-caption text-smoke font-mono">
-            © {footerDate.getFullYear()} Hyperstudio
-          </span>
-        </div>
-      </footer>
+      <Footer />
+
+      <Toaster />
     </div>
   )
 }

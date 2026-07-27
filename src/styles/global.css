@@ -103,19 +103,23 @@
   --text-body: 16px;
   --leading-body: 1.25;
   --text-heading-xs: 18px;
-  --leading-heading-xs: 1.31;
+  --leading-heading-xs: 22px;
   --text-subheading: 21px;
   --leading-subheading: 0.95;
   --text-heading-sm: 23px;
   --leading-heading-sm: 1.07;
   --leading-heading: 1.03;
   --text-heading-lg: 44px;
-  --leading-heading-lg: 1.07;
-  --tracking-heading-lg: -0.31px;
+  --leading-heading-lg: 47px;
+  --tracking-heading-lg: -0.3px;
 
   --text-display: 63px;
   --leading-display: 1.05;
   --tracking-display: -0.69px;
+
+  /* Breakpoints */
+  --breakpoint-xs: 30rem;
+  --breakpoint-ml: 62rem;
 }
 
 @layer base {
@@ -124,11 +128,11 @@
   }
 
   body {
-    @apply bg-background text-foreground leading-body scroll-pt-12 overflow-x-hidden font-sans font-normal antialiased;
+    @apply scroll-pt-12 overflow-x-hidden bg-background font-sans leading-body font-normal text-foreground antialiased;
   }
 
   ::selection {
-    @apply text-background bg-foreground;
+    @apply bg-foreground text-background;
   }
 
   ::-webkit-scrollbar {

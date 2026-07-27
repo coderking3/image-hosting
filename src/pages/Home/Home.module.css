@@ -1,46 +1,57 @@
-/*
- * StatsBadge status indicator —— 1:1 还原 Hyperstudio Lottie 动画
- *
- * Lottie 结构（2s 周期，30fps）：
- *   pointer 层：scale 20 → 33.2(1.66x) → 20，opacity 恒 100%
- *   pulse 层：  scale 20 → 100(5x)，opacity 100% → 0%（~1s 完成）
- *   两层 t=0 时完全重叠（同 scale、同 opacity），pulse 向外扩散后 pointer 留在原位呼吸
- */
-
 @keyframes dot-breathe {
-  0%,
-  100% {
+  0% {
     transform: scale(1);
+    animation-timing-function: cubic-bezier(0.333, 0, 0.412, 0.998);
   }
 
-  50% {
-    transform: scale(1.66);
+  46.667% {
+    transform: scale(1.662);
+    animation-timing-function: cubic-bezier(0.951, -0.004, 0.548, 1.001);
+  }
+
+  100% {
+    transform: scale(1);
   }
 }
 
-@keyframes dot-ping {
+@keyframes dot-ping-scale {
+  0% {
+    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.333, 0, 0.667, 1);
+  }
+
+  51.667% {
+    transform: scale(5);
+  }
+
+  100% {
+    transform: scale(5);
+  }
+}
+
+@keyframes dot-ping-opacity {
   0% {
     opacity: 1;
-    transform: scale(1);
+    animation-timing-function: cubic-bezier(0.167, 0.167, 0.833, 0.833);
   }
 
-  /* ~1.03s / 2s ≈ 52% —— pulse 扩散到 5x 并完全淡出 */
-  52% {
+  51.667% {
     opacity: 0;
-    transform: scale(5);
   }
 
-  /* 剩余 48% 时间保持不可见，等待下个周期同步触发 */
   100% {
     opacity: 0;
-    transform: scale(5);
   }
 }
 
 .breathe {
-  animation: dot-breathe 2s ease-in-out infinite;
+  transform-origin: center;
+  animation: dot-breathe 2s linear infinite;
 }
 
 .ping {
-  animation: dot-ping 2s ease-out infinite;
+  transform-origin: center;
+  animation:
+    dot-ping-scale 2s linear infinite,
+    dot-ping-opacity 2s linear infinite;
 }
