@@ -17,8 +17,35 @@ export default db
 
 /* ==================== 封装的 CRUD 方法 ==================== */
 
-export function addImage(record: ImageRecord) {
-  return db.images.add(record)
+export function addImage(image: ImageRecord) {
+  return db.images.add(image)
+}
+
+export function bulkAddImage(images: ImageRecord[]) {
+  return db.images.bulkAdd(images)
+}
+
+export async function bulkPutImages(images: ImageRecord[]) {
+  if (images.length === 0) {
+    return { inserted: 0, updated: 0 }
+  }
+
+  return db.transaction('rw', db.images, async () => {
+    const existingImages = await db.images.bulkGet(
+      images.map((image) => image.id)
+    )
+    const updated = existingImages.reduce(
+      (count, image) => count + (image === undefined ? 0 : 1),
+      0
+    )
+
+    await db.images.bulkPut(images)
+
+    return {
+      inserted: images.length - updated,
+      updated
+    }
+  })
 }
 
 export function deleteImage(id: string) {

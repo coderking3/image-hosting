@@ -1,22 +1,12 @@
 import ky, { HTTPError } from 'ky'
 
 export const request = ky.create({
-  prefix: import.meta.env.VITE_API_BASE_URL,
+  prefix: import.meta.env.VITE_API_BASE_URL || '/api',
   credentials: 'include',
   timeout: 10_000,
   retry: {
     limit: 2,
     methods: ['get'] // 只对 GET 自动重试
-  },
-  hooks: {
-    afterResponse: [
-      async ({ response }) => {
-        if (response.status === 401) {
-          window.location.href = '/login'
-        }
-        return response
-      }
-    ]
   }
 })
 

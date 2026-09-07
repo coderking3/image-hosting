@@ -1,4 +1,4 @@
-import { defineConfig } from '@king-3/eslint-config'
+import { defineConfig } from '@king3/eslint-config'
 
 export default defineConfig(
   {

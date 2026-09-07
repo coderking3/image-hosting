@@ -3,8 +3,11 @@ import type { UploadResult } from '@/api/upload'
 import { useCallback, useEffect, useRef, useState } from 'react'
 
 import { UploadError, uploadImage } from '@/api/upload'
+import { getImageSize } from '@/utils'
+import { addImage } from '@/utils/db'
 
-export type QueueItemStatus = 'pending' | 'uploading' | 'success' | 'error'
+export type QueueItemStatus =
+  'staged' | 'pending' | 'uploading' | 'success' | 'error'
 
 export interface QueueItem {
   id: string
@@ -18,10 +21,14 @@ export interface QueueItem {
 
 interface UseUploadQueueOptions {
   concurrency?: number
+  enabled?: boolean
+  onUnauthorized?: () => void
 }
 
 export function useUploadQueue({
-  concurrency = 3
+  concurrency = 3,
+  enabled = true,
+  onUnauthorized
 }: UseUploadQueueOptions = {}) {
   const [items, setItems] = useState<QueueItem[]>([])
   const itemsRef = useRef(items)
@@ -51,11 +58,31 @@ export function useUploadQueue({
           onProgress: (percent) => updateItem(item.id, { progress: percent })
         })
         updateItem(item.id, { status: 'success', progress: 100, result })
+
+        try {
+          const { width, height } = await getImageSize(item.file)
+          await addImage({
+            id: crypto.randomUUID(),
+            url: result.url,
+            name: result.name,
+            type: result.type,
+            width,
+            height,
+            date: Date.now()
+          })
+        } catch {
+          // 落库失败不影响"上传成功"状态展示，暂时静默
+        }
       } catch (error) {
-        // 用户主动取消：直接从队列移除，不展示成"失败"状态，避免误导
         if (error instanceof UploadError && error.aborted) {
           setItems((prev) => prev.filter((it) => it.id !== item.id))
           return
+        }
+        if (
+          error instanceof UploadError &&
+          (error.code === -101 || error.status === 401)
+        ) {
+          onUnauthorized?.()
         }
         updateItem(item.id, {
           status: 'error',
@@ -65,10 +92,13 @@ export function useUploadQueue({
         controllersRef.current.delete(item.id)
       }
     },
-    [updateItem]
+    [onUnauthorized, updateItem]
   )
 
+  // 只调度 pending 状态，staged 状态不会被这个 effect 碰到
   useEffect(() => {
+    if (!enabled) return
+
     const uploadingCount = items.filter(
       (it) => it.status === 'uploading'
     ).length
@@ -79,17 +109,37 @@ export function useUploadQueue({
       .filter((it) => it.status === 'pending')
       .slice(0, freeSlots)
       .forEach((item) => startUpload(item))
-  }, [items, concurrency, startUpload])
+  }, [items, concurrency, enabled, startUpload])
 
+  /** 选择/拖拽/粘贴的文件先进 staged 暂存区，不会立即上传 */
   const addFiles = useCallback((files: File[]) => {
     const newItems: QueueItem[] = files.map((file) => ({
       id: `${file.name}-${file.lastModified}-${Math.random().toString(36).slice(2, 8)}`,
       file,
       previewUrl: URL.createObjectURL(file),
-      status: 'pending',
+      status: 'staged',
       progress: 0
     }))
     setItems((prev) => [...prev, ...newItems])
+  }, [])
+
+  /** 用户点击"开始上传"：把所有 staged 转成 pending，交给调度 effect 接管 */
+  const confirmUpload = useCallback(() => {
+    setItems((prev) =>
+      prev.map((it) =>
+        it.status === 'staged' ? { ...it, status: 'pending' } : it
+      )
+    )
+  }, [])
+
+  /** 取消全部暂存（尚未上传，纯本地清空） */
+  const cancelAllStaged = useCallback(() => {
+    setItems((prev) => {
+      prev
+        .filter((it) => it.status === 'staged')
+        .forEach((it) => URL.revokeObjectURL(it.previewUrl))
+      return prev.filter((it) => it.status !== 'staged')
+    })
   }, [])
 
   const retryItem = useCallback((id: string) => {
@@ -102,7 +152,7 @@ export function useUploadQueue({
     )
   }, [])
 
-  /** 移除：若正在上传中则先取消请求，再从队列移除 */
+  /** 通用移除：staged/pending/uploading/success/error 任意状态都能移除 */
   const removeItem = useCallback((id: string) => {
     controllersRef.current.get(id)?.abort()
     setItems((prev) => {
@@ -129,5 +179,13 @@ export function useUploadQueue({
     }
   }, [])
 
-  return { items, addFiles, retryItem, removeItem, clearFinished }
+  return {
+    items,
+    addFiles,
+    confirmUpload,
+    cancelAllStaged,
+    retryItem,
+    removeItem,
+    clearFinished
+  }
 }

@@ -19,29 +19,14 @@ export async function copyToClipboard(content: string): Promise<boolean> {
   }
 }
 
-export const getImageSize = (
-  file: File
-): Promise<{
+export async function getImageSize(file: File): Promise<{
   height: number
   width: number
-}> => {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    const objectUrl = URL.createObjectURL(file)
-
-    img.onload = () => {
-      URL.revokeObjectURL(objectUrl)
-      resolve({
-        height: img.height,
-        width: img.width
-      })
-    }
-    img.onerror = (error: Event | string) => {
-      URL.revokeObjectURL(objectUrl)
-      reject(new Error(`图片加载失败: ${error}`))
-    }
-    img.src = objectUrl
-  })
+}> {
+  const bitmap = await createImageBitmap(file)
+  const { width, height } = bitmap
+  bitmap.close()
+  return { width, height }
 }
 
 export function downloadJson(data: unknown, filename: string) {
@@ -52,6 +37,9 @@ export function downloadJson(data: unknown, filename: string) {
   const a = document.createElement('a')
   a.href = url
   a.download = filename
+  a.hidden = true
+  document.body.append(a)
   a.click()
-  URL.revokeObjectURL(url)
+  a.remove()
+  globalThis.setTimeout(() => URL.revokeObjectURL(url), 0)
 }

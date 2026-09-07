@@ -45,7 +45,7 @@ function StatsBadge() {
     //   })
 
     new Promise((resolve) => {
-      // eslint-disable-next-line react-web-api/no-leaked-timeout
+      // eslint-disable-next-line react/web-api-no-leaked-timeout
       setTimeout(resolve, 2000)
     }).then(() => {
       if (!cancelled) setCount(2307)
@@ -64,10 +64,10 @@ function StatsBadge() {
       {/* 动画指示器  */}
       <span className="relative flex size-5 items-center justify-center">
         <span
-          className={`absolute size-1 rounded-full bg-[#05ac5c] ${styles.ping}`}
+          className={`absolute size-1 rounded-full bg-success ${styles.ping}`}
         />
         <span
-          className={`relative size-1 rounded-full bg-[#05ac5c] ${styles.breathe}`}
+          className={`relative size-1 rounded-full bg-success ${styles.breathe}`}
         />
       </span>
       <span className="p-[6px_10px_5px_2px] font-mono text-caption [text-stroke-width:0.15px]">

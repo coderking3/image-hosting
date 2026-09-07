@@ -1,0 +1,19 @@
+/* stylelint-disable custom-property-pattern */
+
+/* Lightbox 主题覆盖，统一成画廊卡片的圆形深色底风格 */
+.yarl__root {
+  --yarl__color_button: var(--color-chalk);
+  --yarl__color_button_active: var(--color-primary);
+  --yarl__button_width: 2.25rem;
+  --yarl__button_height: 2.25rem;
+}
+
+.yarl__button {
+  background-color: rgb(0 0 0 / 65%);
+  border-radius: 9999px;
+  transition: opacity 0.15s ease;
+}
+
+.yarl__button:hover {
+  opacity: 0.85;
+}

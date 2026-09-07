@@ -1,8 +1,9 @@
 import type { FormEvent } from 'react'
 
+import type { UserInfo } from '@/api/user'
 import type { Certificate } from '@/types'
 
-import { useMutation, useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   CheckCircle2,
   Eye,
@@ -15,9 +16,11 @@ import {
 } from 'lucide-react'
 import { QRCodeSVG } from 'qrcode.react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toast } from 'sonner'
 
+import { loginWithCertificate } from '@/api/auth'
 import { generateQrcode, pollQrcode } from '@/api/login'
-import { getMyInfo } from '@/api/user'
+import { getCurrentUser } from '@/api/user'
 import {
   Button,
   Dialog,
@@ -34,63 +37,23 @@ import {
   TabsList,
   TabsTrigger
 } from '@/components/ui'
-import { getCookie, removeCookie, setCookie } from '@/utils/cookie'
+import { setCurrentUser } from '@/hooks/useCurrentUser'
 import { parseKyError } from '@/utils/request'
 
 type QrStatus =
-  | 'loading'
-  | 'pending'
-  | 'scanned'
-  | 'verifying'
-  | 'expired'
-  | 'error'
-  | 'success'
+  'loading' | 'pending' | 'scanned' | 'verifying' | 'expired' | 'error'
 
 interface LoginModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  onSuccess?: () => void
+  onSuccess?: (user: UserInfo) => void
 }
 
 interface LoginPanelProps {
-  onAuthenticated: () => void
+  onAuthenticated: (user: UserInfo) => void
 }
 
 const QR_CODE_LIFETIME = 180_000
-const LOGIN_MODAL_CLOSE_DELAY = 1200
-const COOKIE_NAMES = ['SESSDATA', 'bili_jct'] as const
-
-function getAuthCookieOptions() {
-  const hostname = window.location.hostname
-  const sharesProductionDomain =
-    hostname === 'blog.site' || hostname.endsWith('.blog.site')
-
-  return {
-    domain: sharesProductionDomain ? '.blog.site' : undefined,
-    path: '/',
-    sameSite: 'lax' as const,
-    secure: window.location.protocol === 'https:'
-  }
-}
-
-function writeCertificate(certificate: Certificate) {
-  const options = getAuthCookieOptions()
-  setCookie('SESSDATA', certificate.SESSDATA, options)
-  setCookie('bili_jct', certificate.bili_jct, options)
-}
-
-function restoreCertificate(previous: Partial<Certificate>) {
-  const options = getAuthCookieOptions()
-
-  for (const name of COOKIE_NAMES) {
-    const value = previous[name]
-    if (value === undefined) {
-      removeCookie(name, options)
-    } else {
-      setCookie(name, value, options)
-    }
-  }
-}
 
 function QrcodePanel({ onAuthenticated }: LoginPanelProps) {
   const [qrcodeKey, setQrcodeKey] = useState<string | null>(null)
@@ -116,17 +79,16 @@ function QrcodePanel({ onAuthenticated }: LoginPanelProps) {
   }, [clearExpiryTimer])
 
   const { mutate: verifyLogin } = useMutation({
-    mutationFn: getMyInfo,
-    onSuccess: (res) => {
-      if (res.code === 0) {
+    mutationFn: getCurrentUser,
+    onSuccess: (user) => {
+      if (user) {
         clearExpiryTimer()
-        setStatus('success')
-        onAuthenticated()
+        onAuthenticated(user)
         return
       }
 
       clearExpiryTimer()
-      setErrorMessage(res.message || '登录凭证未能通过验证')
+      setErrorMessage('登录凭证未能通过验证')
       setStatus('error')
     },
     onError: async (error) => {
@@ -222,8 +184,7 @@ function QrcodePanel({ onAuthenticated }: LoginPanelProps) {
     scanned: '等待手机确认...',
     verifying: '正在验证登录状态...',
     expired: '二维码已失效，请重新生成',
-    error: errorMessage,
-    success: '登录成功，即将自动关闭'
+    error: errorMessage
   }[status]
 
   return (
@@ -283,13 +244,6 @@ function QrcodePanel({ onAuthenticated }: LoginPanelProps) {
                 )}
                 重新生成
               </Button>
-            </div>
-          )}
-
-          {status === 'success' && (
-            <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-background/90 text-foreground">
-              <CheckCircle2 className="size-8" />
-              <span className="text-caption">登录成功</span>
             </div>
           )}
         </div>
@@ -374,38 +328,22 @@ function ManualLoginPanel({ onAuthenticated }: LoginPanelProps) {
     bili_jct: false
   })
   const [formError, setFormError] = useState('')
-  const [successMessage, setSuccessMessage] = useState('')
 
   const loginMutation = useMutation({
     mutationFn: async (nextCertificate: Certificate) => {
-      const previous: Partial<Certificate> = {
-        SESSDATA: getCookie<string>('SESSDATA'),
-        bili_jct: getCookie<string>('bili_jct')
+      const response = await loginWithCertificate(nextCertificate)
+      if (response.code !== 0) {
+        throw new Error(response.message || 'Cookie 无效或已过期')
       }
-
-      writeCertificate(nextCertificate)
-
-      try {
-        const response = await getMyInfo()
-        if (response.code !== 0) {
-          throw new Error(response.message || 'Cookie 无效或已过期')
-        }
-        return response.data
-      } catch (error) {
-        restoreCertificate(previous)
-        throw new Error(await parseKyError(error), { cause: error })
-      }
+      return response.data
     },
     onSuccess: (user) => {
       setFormError('')
-      setSuccessMessage(`欢迎回来，${user.name}`)
-      onAuthenticated()
+      setCertificate({ SESSDATA: '', bili_jct: '' })
+      onAuthenticated(user)
     },
-    onError: (error) => {
-      setSuccessMessage('')
-      setFormError(
-        error instanceof Error ? error.message : 'Cookie 验证失败，请重试'
-      )
+    onError: async (error) => {
+      setFormError(await parseKyError(error))
     }
   })
 
@@ -428,7 +366,6 @@ function ManualLoginPanel({ onAuthenticated }: LoginPanelProps) {
     }
 
     setFormError('')
-    setSuccessMessage('')
     loginMutation.mutate(nextCertificate)
   }
 
@@ -474,24 +411,12 @@ function ManualLoginPanel({ onAuthenticated }: LoginPanelProps) {
               {formError}
             </FieldError>
           )}
-
-          {successMessage && (
-            <div
-              className="flex items-center gap-1.5 text-foreground"
-              role="status"
-            >
-              <CheckCircle2 className="size-3.5 shrink-0" />
-              <span className="line-clamp-1">
-                {successMessage}，即将自动关闭
-              </span>
-            </div>
-          )}
         </div>
 
         <Button
           type="submit"
           size="lg"
-          disabled={loginMutation.isPending || Boolean(successMessage)}
+          disabled={loginMutation.isPending}
           className="mt-2 h-9 w-full rounded-lg font-mono xs:h-10"
         >
           {loginMutation.isPending ? (
@@ -519,28 +444,27 @@ function ManualLoginPanel({ onAuthenticated }: LoginPanelProps) {
 }
 
 export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
-  const closeTimerRef = useRef<number | null>(null)
+  const queryClient = useQueryClient()
   const successHandledRef = useRef(false)
 
-  const handleAuthenticated = useCallback(() => {
-    if (successHandledRef.current) return
+  const handleAuthenticated = useCallback(
+    (user: UserInfo) => {
+      if (successHandledRef.current) return
 
-    successHandledRef.current = true
-    onSuccess?.()
-    closeTimerRef.current = window.setTimeout(() => {
+      successHandledRef.current = true
+      setCurrentUser(queryClient, user)
+      onSuccess?.(user)
+      toast.success('登录成功', {
+        description: `欢迎回来，${user.name}`,
+        position: 'top-center'
+      })
       onOpenChange(false)
-    }, LOGIN_MODAL_CLOSE_DELAY)
-  }, [onOpenChange, onSuccess])
+    },
+    [onOpenChange, onSuccess, queryClient]
+  )
 
   useEffect(() => {
     if (open) successHandledRef.current = false
-
-    return () => {
-      if (closeTimerRef.current !== null) {
-        window.clearTimeout(closeTimerRef.current)
-        closeTimerRef.current = null
-      }
-    }
   }, [open])
 
   return (
@@ -556,20 +480,17 @@ export function LoginModal({ open, onOpenChange, onSuccess }: LoginModalProps) {
         </DialogHeader>
 
         <Tabs defaultValue="qrcode" className="gap-3 xs:gap-4">
-          <TabsList
-            variant="line"
-            className="h-9 w-full border-b border-border p-0 xs:h-10"
-          >
+          <TabsList className="h-11 w-full gap-1 rounded-lg bg-white/4 p-1 xs:h-11.5">
             <TabsTrigger
               value="qrcode"
-              className="h-full text-caption xs:text-sm [&_svg]:size-3.75"
+              className="h-full rounded-md text-caption text-muted-foreground transition-colors xs:text-sm [&_svg]:size-3.75"
             >
               <QrCode />
               扫码登录
             </TabsTrigger>
             <TabsTrigger
               value="manual"
-              className="h-full text-caption xs:text-sm [&_svg]:size-3.75"
+              className="h-full rounded-md text-caption text-muted-foreground transition-colors xs:text-sm [&_svg]:size-3.75"
             >
               <KeyRound />
               手动填入

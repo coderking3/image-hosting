@@ -1,8 +1,9 @@
 import type { RouteObject } from 'react-router'
 
 import { AppLayout } from '../components/layout'
+import DocsPage from '../pages/Docs'
 import Gallery from '../pages/Gallery'
-import Home from '../pages/Home/Home'
+import Home from '../pages/Home'
 import Upload from '../pages/Upload'
 
 export const routes = createRoutes([
@@ -17,6 +18,10 @@ export const routes = createRoutes([
   {
     path: '/gallery',
     element: <Gallery />
+  },
+  {
+    path: '/docs',
+    element: <DocsPage />
   }
 ])
 

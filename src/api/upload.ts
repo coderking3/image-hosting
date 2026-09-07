@@ -21,15 +21,17 @@ interface UploadOptions {
 }
 
 export class UploadError extends Error {
+  code?: number
   status?: number
   aborted?: boolean
 
   constructor(
     message: string,
-    options: { status?: number; aborted?: boolean } = {}
+    options: { code?: number; status?: number; aborted?: boolean } = {}
   ) {
     super(message)
     this.name = 'UploadError'
+    this.code = options.code
     this.status = options.status
     this.aborted = options.aborted
   }
@@ -44,7 +46,8 @@ export function uploadImage(file: File, options: UploadOptions = {}) {
 
     const xhr = new XMLHttpRequest()
     const apiBaseUrl =
-      import.meta.env.VITE_API_BASE_URL?.replace(TRAILING_SLASH_RE, '') ?? ''
+      import.meta.env.VITE_API_BASE_URL?.replace(TRAILING_SLASH_RE, '') ??
+      '/api'
     xhr.open('POST', `${apiBaseUrl}/upload`)
     xhr.withCredentials = true
 
@@ -55,31 +58,43 @@ export function uploadImage(file: File, options: UploadOptions = {}) {
     }
 
     xhr.onload = () => {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const response = JSON.parse(xhr.responseText) as UploadResponse
-          if (response.code !== 0 || !response.data?.location) {
-            reject(
-              new UploadError(response.message || '上传失败', {
-                status: xhr.status
-              })
-            )
-            return
-          }
-          resolve({
-            url: response.data.location,
-            name: file.name,
-            size: file.size,
-            type: file.type
-          })
-        } catch {
+      let response: UploadResponse | undefined
+
+      try {
+        response = JSON.parse(xhr.responseText) as UploadResponse
+      } catch {
+        if (xhr.status >= 200 && xhr.status < 300) {
           reject(new UploadError('响应解析失败', { status: xhr.status }))
+          return
         }
+      }
+
+      if (xhr.status >= 200 && xhr.status < 300) {
+        if (!response || response.code !== 0 || !response.data?.location) {
+          reject(
+            new UploadError(response?.message || '上传失败', {
+              code: response?.code,
+              status: xhr.status
+            })
+          )
+          return
+        }
+
+        resolve({
+          url: response.data.location,
+          name: file.name,
+          size: file.size,
+          type: file.type
+        })
       } else {
         reject(
-          new UploadError(`上传失败（状态码 ${xhr.status}）`, {
-            status: xhr.status
-          })
+          new UploadError(
+            response?.message || `上传失败（状态码 ${xhr.status}）`,
+            {
+              code: response?.code,
+              status: xhr.status
+            }
+          )
         )
       }
     }

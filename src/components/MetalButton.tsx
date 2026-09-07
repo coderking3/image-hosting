@@ -2,6 +2,7 @@ import type { VariantProps } from 'class-variance-authority'
 
 import { cva } from 'class-variance-authority'
 import * as React from 'react'
+import { Link } from 'react-router'
 
 import { cn } from '@/utils'
 
@@ -75,13 +76,13 @@ export function MetalButton({
 
   if (href) {
     return (
-      <a
-        href={href}
+      <Link
+        to={href}
         className={cn(outerVariants({ variant }), className)}
         {...(props as React.ComponentProps<'a'>)}
       >
         {content}
-      </a>
+      </Link>
     )
   }
 
