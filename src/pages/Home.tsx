@@ -1,6 +1,8 @@
+import { useQuery } from '@tanstack/react-query'
 import { ArrowRight, Copy, Database, Images, Upload } from 'lucide-react'
-import { Fragment, useEffect, useState } from 'react'
+import { Fragment } from 'react'
 
+import { getStats } from '@/api'
 import { MetalButton } from '@/components'
 
 import styles from './Home.module.css'
@@ -29,32 +31,15 @@ const features = [
 ]
 
 function StatsBadge() {
-  const [count, setCount] = useState<number | '~'>('~')
+  const { data, isError } = useQuery({
+    queryKey: ['stats', 'hosted-images'],
+    queryFn: getStats,
+    retry: false
+  })
 
-  useEffect(() => {
-    let cancelled = false
+  if (isError) return null
 
-    // TODO: 换成你实际的统计接口
-    // fetch('/api/stats')
-    //   .then((res) => res.json())
-    //   .then((data) => {
-    //     if (!cancelled) setCount(data.totalImages)
-    //   })
-    //   .catch(() => {
-    //     // 接口没就绪时静默失败，不渲染徽章
-    //   })
-
-    new Promise((resolve) => {
-      // eslint-disable-next-line react/web-api-no-leaked-timeout
-      setTimeout(resolve, 2000)
-    }).then(() => {
-      if (!cancelled) setCount(2307)
-    })
-
-    return () => {
-      cancelled = true
-    }
-  }, [])
+  const count = data?.totalImages
 
   return (
     <a
@@ -71,7 +56,7 @@ function StatsBadge() {
         />
       </span>
       <span className="p-[6px_10px_5px_2px] font-mono text-caption [text-stroke-width:0.15px]">
-        已托管 {count.toLocaleString()} 张图片
+        已托管 {count === undefined ? '~' : count.toLocaleString()} 张图片
       </span>
     </a>
   )

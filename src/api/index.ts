@@ -1,4 +1,5 @@
 export * from './auth'
 export * from './login'
+export * from './stats'
 export * from './upload'
 export * from './user'
