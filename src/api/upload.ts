@@ -1,5 +1,7 @@
 import type { ApiResponse } from '@/types'
 
+import { normalizeImageUrl } from '@/utils/format'
+
 const TRAILING_SLASH_RE = /\/$/
 
 export interface UploadData {
@@ -81,7 +83,7 @@ export function uploadImage(file: File, options: UploadOptions = {}) {
         }
 
         resolve({
-          url: response.data.location,
+          url: normalizeImageUrl(response.data.location),
           name: file.name,
           size: file.size,
           type: file.type

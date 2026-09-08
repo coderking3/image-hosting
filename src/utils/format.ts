@@ -17,6 +17,13 @@ export interface BilibiliParams {
   format?: BilibiliFormat
 }
 
+const HTTP_PROTOCOL_RE = /^http:\/\//i
+
+/** Upgrade image URLs to HTTPS while leaving relative and non-HTTP URLs intact. */
+export function normalizeImageUrl(url: string): string {
+  return url.trim().replace(HTTP_PROTOCOL_RE, 'https://')
+}
+
 // Format: (original url)@(\d+[whsepqoc]_?)*(\.(webp|gif|png|jpg|jpeg))?
 // Segment order is fixed as w h e p q c.
 export function buildBilibiliUrl(src: string, params: BilibiliParams): string {

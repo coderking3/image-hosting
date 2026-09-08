@@ -29,6 +29,7 @@ import {
 } from '@/components/ui'
 import { cn, copyToClipboard, downloadJson } from '@/utils'
 import { bulkPutImages } from '@/utils/db'
+import { normalizeImageUrl } from '@/utils/format'
 
 const MAX_IMPORT_FILE_SIZE = 10 * 1024 * 1024
 const MAX_IMPORT_TEXT_LENGTH = 10 * 1024 * 1024
@@ -112,7 +113,15 @@ function parseImageRecords(text: string): ImageRecord[] {
 
     ids.add(id)
 
-    return { id, name, url, type, width, height, date }
+    return {
+      id,
+      name,
+      url: normalizeImageUrl(url),
+      type,
+      width,
+      height,
+      date
+    }
   })
 }
 
